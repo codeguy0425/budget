@@ -1,0 +1,1195 @@
+
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>House Renovation Budget & Item Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-brand-600 text-white p-2.5 rounded-xl shadow-md flex items-center justify-center">
+                    <i class="fa-solid fa-house-chimney-crack text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-slate-900 text-lg leading-tight">RenoBudget</h1>
+                    <p class="text-xs text-slate-500 font-medium">House Renovation Tracker</p>
+                </div>
+            </div>
+
+            <!-- Action Buttons header -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="loadSampleData()" class="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center gap-1.5" title="Load demo sample items">
+                    <i class="fa-solid fa-vial"></i>
+                    <span class="hidden sm:inline">Demo Data</span>
+                </button>
+                <button onclick="openModal('exportImportModal')" class="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-export"></i>
+                    <span class="hidden sm:inline">Backup / Export</span>
+                </button>
+                <button onclick="openModal('itemModal')" class="px-4 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 active:scale-95 rounded-xl shadow-md transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Add Item</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Top Dashboard Metrics & Summary -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Total Expense Card -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Spending</p>
+                        <h3 id="dashTotalBudget" class="text-2xl font-extrabold text-slate-900 mt-1">$0.00</h3>
+                    </div>
+                    <div class="p-3 bg-brand-50 rounded-xl text-brand-600">
+                        <i class="fa-solid fa-wallet text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between">
+                    <span>Items Counted: <strong id="dashTotalCount" class="text-slate-800">0</strong></span>
+                    <span id="dashAvgCost">Avg: $0</span>
+                </div>
+            </div>
+
+            <!-- Ordered & In Transit -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">In Pipeline / Ordered</p>
+                        <h3 id="dashOrderedCost" class="text-2xl font-extrabold text-amber-600 mt-1">$0.00</h3>
+                    </div>
+                    <div class="p-3 bg-amber-50 rounded-xl text-amber-600">
+                        <i class="fa-solid fa-truck-fast text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between">
+                    <span>Ordered / Scheduled: <strong id="dashOrderedCount" class="text-slate-800">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Delivered & Installed -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Completed / Delivered</p>
+                        <h3 id="dashDeliveredCost" class="text-2xl font-extrabold text-emerald-600 mt-1">$0.00</h3>
+                    </div>
+                    <div class="p-3 bg-emerald-50 rounded-xl text-emerald-600">
+                        <i class="fa-solid fa-circle-check text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between">
+                    <span>Delivered/Installed: <strong id="dashDeliveredCount" class="text-slate-800">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Wishlist / Backlog -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Wishlist / Pending</p>
+                        <h3 id="dashWishlistCost" class="text-2xl font-extrabold text-indigo-600 mt-1">$0.00</h3>
+                    </div>
+                    <div class="p-3 bg-indigo-50 rounded-xl text-indigo-600">
+                        <i class="fa-solid fa-bookmark text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between">
+                    <span>Pending Items: <strong id="dashWishlistCount" class="text-slate-800">0</strong></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Visual Analytics & Category Breakdown Section -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Chart Container -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-1 flex flex-col justify-between">
+                <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-600"></i> Category Distribution
+                </h2>
+                <div class="relative w-full h-56 flex items-center justify-center">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Category Spend Summary Bars -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2">
+                <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
+                    <span class="flex items-center gap-2"><i class="fa-solid fa-layer-group text-brand-600"></i> Budget Breakdown by Group</span>
+                    <span class="text-xs font-normal text-slate-500">Sorted by Highest Spending</span>
+                </h2>
+                <div id="categoryBreakdownContainer" class="space-y-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar">
+                    <!-- Populated dynamically by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Filters, Search and Controls Bar -->
+        <section class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+            <div class="flex flex-col md:flex-row gap-3 justify-between items-center">
+                <!-- Search Input -->
+                <div class="relative w-full md:w-72">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" id="searchInput" oninput="renderItems()" placeholder="Search name, model, store..." class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+                    <!-- Category Filter -->
+                    <select id="filterCategory" onchange="renderItems()" class="text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="ALL">All Categories</option>
+                    </select>
+
+                    <!-- Status Filter -->
+                    <select id="filterStatus" onchange="renderItems()" class="text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="ALL">All Statuses</option>
+                        <option value="Wishlist">Wishlist / Backlog</option>
+                        <option value="Ordered">Ordered</option>
+                        <option value="In Transit">In Transit / Scheduled</option>
+                        <option value="Delivered">Delivered</option>
+                        <option value="Installed">Installed</option>
+                    </select>
+
+                    <!-- Sort Option -->
+                    <select id="sortBy" onchange="renderItems()" class="text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="date-desc">Newest First</option>
+                        <option value="date-asc">Oldest First</option>
+                        <option value="price-desc">Price: High to Low</option>
+                        <option value="price-asc">Price: Low to High</option>
+                        <option value="name-asc">Name: A to Z</option>
+                        <option value="delivery-asc">Delivery Date: Earliest</option>
+                    </select>
+
+                    <!-- View Switcher -->
+                    <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                        <button id="viewBtnCards" onclick="switchView('cards')" class="p-1.5 px-2.5 text-xs font-semibold rounded-lg bg-white shadow-xs text-brand-600 transition">
+                            <i class="fa-solid fa-grip"></i>
+                        </button>
+                        <button id="viewBtnTable" onclick="switchView('table')" class="p-1.5 px-2.5 text-xs font-semibold rounded-lg text-slate-500 transition hover:text-slate-800">
+                            <i class="fa-solid fa-list-ul"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Item Displays (Cards & Table Views) -->
+        <section id="itemsContainer">
+            <!-- Cards View Grid -->
+            <div id="cardsView" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <!-- Dynamically Populated -->
+            </div>
+
+            <!-- Table View -->
+            <div id="tableView" class="hidden bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left text-sm text-slate-600">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wider font-semibold">
+                            <tr>
+                                <th class="py-3 px-4">Item Details</th>
+                                <th class="py-3 px-4">Category</th>
+                                <th class="py-3 px-4">Status</th>
+                                <th class="py-3 px-4">Store / Model</th>
+                                <th class="py-3 px-4 text-right">Price</th>
+                                <th class="py-3 px-4">Target Date</th>
+                                <th class="py-3 px-4 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-slate-100">
+                            <!-- Dynamically Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Empty State Display -->
+            <div id="emptyState" class="hidden bg-white border border-dashed border-slate-300 rounded-2xl p-12 text-center">
+                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                    <i class="fa-solid fa-box-open"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-800">No items found</h3>
+                <p class="text-sm text-slate-500 max-w-sm mx-auto mt-1">Try adjusting your filters or search terms, or add a new renovation item to get started.</p>
+                <button onclick="openModal('itemModal')" class="mt-4 px-4 py-2 bg-brand-600 text-white rounded-xl text-sm font-semibold hover:bg-brand-700 transition">
+                    + Add New Item
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400">
+        <p>House Renovation Budget & Item Tracker • Data stored securely in your browser LocalStorage</p>
+    </footer>
+
+    <!-- ADD / EDIT ITEM MODAL -->
+    <div id="itemModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in duration-200">
+            <!-- Modal Header -->
+            <div class="p-4 sm:p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 id="modalTitle" class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square text-brand-600"></i> Add New Item
+                </h3>
+                <button onclick="closeModal('itemModal')" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-200 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Form -->
+            <form id="itemForm" onsubmit="handleFormSubmit(event)" class="p-4 sm:p-6 overflow-y-auto custom-scrollbar space-y-4">
+                <input type="hidden" id="itemId">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Item Name -->
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Item Name *</label>
+                        <input type="text" id="itemName" required placeholder="e.g. Ergonomic Desk Chair, Smart Refrigerator" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+
+                    <!-- Category -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Category / Grouping *</label>
+                        <select id="itemCategory" required onchange="toggleCustomCategory()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            <option value="Computer Devices">Computer Devices</option>
+                            <option value="Lighting Equipment">Lighting Equipment</option>
+                            <option value="Electrical Appliances">Electrical Appliances</option>
+                            <option value="Furniture">Furniture</option>
+                            <option value="Bathroom">Bathroom</option>
+                            <option value="Kitchen">Kitchen</option>
+                            <option value="Plumbing">Plumbing</option>
+                            <option value="Hardware & Tools">Hardware & Tools</option>
+                            <option value="Decor & Soft Furnishings">Decor & Soft Furnishings</option>
+                            <option value="Custom">-- Custom Category --</option>
+                        </select>
+                    </div>
+
+                    <!-- Custom Category Input (Hidden by default) -->
+                    <div id="customCategoryContainer" class="hidden">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Custom Category Name *</label>
+                        <input type="text" id="itemCustomCategory" placeholder="e.g. Smart Home, Landscaping" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+
+                    <!-- Status -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Status Flag *</label>
+                        <select id="itemStatus" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            <option value="Wishlist">Wishlist / Backlog</option>
+                            <option value="Ordered">Ordered</option>
+                            <option value="In Transit">In Transit / Scheduled</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Installed">Installed</option>
+                        </select>
+                    </div>
+
+                    <!-- Buy Price -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Buy Price ($) *</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">$</span>
+                            <input type="number" step="0.01" min="0" id="itemPrice" required placeholder="0.00" class="w-full pl-7 pr-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Store Bought From -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Bought From / Store</label>
+                        <input type="text" id="itemStore" placeholder="e.g. IKEA, Amazon, Local Lighting Shop" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+
+                    <!-- Model / Serial No -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Model / Serial Number</label>
+                        <input type="text" id="itemModel" placeholder="e.g. LG-OLED-65-C2 or SK-9883" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+
+                    <!-- Target Delivery Date -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Target / Delivery Date</label>
+                        <input type="date" id="itemDeliveryDate" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+
+                    <!-- Web Link -->
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Product Web Link / URL</label>
+                        <input type="url" id="itemLink" placeholder="https://example.com/product/123" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+
+                    <!-- Image Upload -->
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Image Attachment</label>
+                        <div class="flex items-center gap-4">
+                            <label class="flex-1 border-2 border-dashed border-slate-300 hover:border-brand-500 rounded-xl p-3 text-center cursor-pointer transition bg-slate-50">
+                                <i class="fa-solid fa-cloud-arrow-up text-brand-600 text-lg mb-1"></i>
+                                <span class="block text-xs text-slate-600 font-medium">Click to upload photo or drag image file</span>
+                                <input type="file" id="itemImageInput" accept="image/*" class="hidden" onchange="previewImageFile(this)">
+                            </label>
+                            <div id="imagePreviewBox" class="w-16 h-16 rounded-xl border border-slate-200 overflow-hidden hidden relative group bg-slate-100 flex-shrink-0">
+                                <img id="imagePreviewEl" src="" class="w-full h-full object-cover">
+                                <button type="button" onclick="removeSelectedImage()" class="absolute inset-0 bg-slate-900/60 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-xs">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description / Notes -->
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Description / Notes</label>
+                        <textarea id="itemDescription" rows="3" placeholder="Dimensions, warranty details, color code, installer contacts..." class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+                    </div>
+                </div>
+
+                <!-- Footer Buttons -->
+                <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('itemModal')" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-md transition">
+                        Save Item
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- DETAIL / PREVIEW MODAL -->
+    <div id="detailModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in duration-200">
+            <div id="detailContent" class="p-5 overflow-y-auto custom-scrollbar space-y-4">
+                <!-- Dynamically Populated -->
+            </div>
+            <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-2">
+                <button onclick="closeModal('detailModal')" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 rounded-xl transition">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EXPORT / IMPORT MODAL -->
+    <div id="exportImportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-database text-brand-600"></i> Backup & Data Transfer
+                </h3>
+                <button onclick="closeModal('exportImportModal')" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <p class="text-xs text-slate-500">Export your data to backup or import items from a JSON file.</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="exportJSON()" class="p-3 border border-slate-200 rounded-xl text-center hover:bg-brand-50 hover:border-brand-300 transition text-slate-700 text-xs font-semibold flex flex-col items-center gap-2">
+                        <i class="fa-solid fa-download text-brand-600 text-xl"></i>
+                        Export JSON
+                    </button>
+                    <button onclick="exportCSV()" class="p-3 border border-slate-200 rounded-xl text-center hover:bg-brand-50 hover:border-brand-300 transition text-slate-700 text-xs font-semibold flex flex-col items-center gap-2">
+                        <i class="fa-solid fa-file-csv text-emerald-600 text-xl"></i>
+                        Export CSV
+                    </button>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Import Data (JSON)</label>
+                    <input type="file" id="importFileInput" accept=".json" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100">
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-2">
+                <button onclick="clearAllData()" class="text-xs text-red-500 hover:underline">Clear All Data</button>
+                <button onclick="importJSON()" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold hover:bg-brand-700 transition">Import File</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application JavaScript Logic -->
+    <script>
+        // State Management
+        let items = [];
+        let currentView = 'cards';
+        let currentImageData = null;
+        let categoryChartInstance = null;
+
+        // Categories Configuration
+        const DEFAULT_CATEGORIES = [
+            'Computer Devices',
+            'Lighting Equipment',
+            'Electrical Appliances',
+            'Furniture',
+            'Bathroom',
+            'Kitchen',
+            'Plumbing',
+            'Hardware & Tools',
+            'Decor & Soft Furnishings'
+        ];
+
+        // Status Badge Colors & Style Helper
+        const STATUS_CONFIG = {
+            'Wishlist': { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-300', icon: 'fa-bookmark' },
+            'Ordered': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', icon: 'fa-box' },
+            'In Transit': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', icon: 'fa-truck-fast' },
+            'Delivered': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', icon: 'fa-house-circle-check' },
+            'Installed': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', icon: 'fa-screwdriver-wrench' }
+        };
+
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStoredItems();
+            populateCategoryFilter();
+            renderDashboard();
+            renderItems();
+        });
+
+        // Load items from localStorage
+        function loadStoredItems() {
+            const stored = localStorage.getItem('reno_tracker_items');
+            if (stored) {
+                try {
+                    items = JSON.parse(stored);
+                } catch (e) {
+                    items = [];
+                }
+            } else {
+                // If empty, load sample data initially for quick demo
+                items = getSampleData();
+                saveToLocalStorage();
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('reno_tracker_items', JSON.stringify(items));
+        }
+
+        // Sample Data Generator
+        function getSampleData() {
+            return [
+                {
+                    id: '1',
+                    name: 'Ergonomic Desk Chair',
+                    category: 'Computer Devices',
+                    price: 349.99,
+                    store: 'Herman Miller Outlet',
+                    model: 'Aeron-V2-Grey',
+                    status: 'Delivered',
+                    deliveryDate: '2026-10-15',
+                    link: 'https://example.com/chair',
+                    description: 'Fully adjustable mesh ergonomic office chair for home studio.',
+                    image: 'https://images.unsplash.com/photo-1580481072645-022f9a6d1270?w=300&auto=format&fit=crop&q=60',
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: '2',
+                    name: 'Smart RGB Recessed Ceiling Lights (Pack of 8)',
+                    category: 'Lighting Equipment',
+                    price: 189.50,
+                    store: 'Amazon',
+                    model: 'Philips Hue Slim Downlight',
+                    status: 'In Transit',
+                    deliveryDate: '2026-11-02',
+                    link: 'https://example.com/lights',
+                    description: 'Dimmable color ambient recessed lighting for main living room area.',
+                    image: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=300&auto=format&fit=crop&q=60',
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: '3',
+                    name: 'French Door Smart Refrigerator',
+                    category: 'Electrical Appliances',
+                    price: 1850.00,
+                    store: 'Best Buy',
+                    model: 'LG Instaview 26cu',
+                    status: 'Ordered',
+                    deliveryDate: '2026-11-10',
+                    link: '',
+                    description: 'Stainless steel finish with dual ice maker.',
+                    image: 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=300&auto=format&fit=crop&q=60',
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: '4',
+                    name: 'Matte Black Rainfall Shower Head',
+                    category: 'Bathroom',
+                    price: 120.00,
+                    store: 'Local Hardware Store',
+                    model: 'Kohler-R899',
+                    status: 'Installed',
+                    deliveryDate: '2026-09-20',
+                    link: '',
+                    description: 'High pressure brass wall mount rainfall head.',
+                    image: '',
+                    createdAt: new Date().toISOString()
+                }
+            ];
+        }
+
+        function loadSampleData() {
+            if (confirm('Load demo sample items? This will reset current list.')) {
+                items = getSampleData();
+                saveToLocalStorage();
+                populateCategoryFilter();
+                renderDashboard();
+                renderItems();
+            }
+        }
+
+        // Filter Categories Dynamic Population
+        function populateCategoryFilter() {
+            const filterSelect = document.getElementById('filterCategory');
+            // extract unique categories
+            const existingCategories = new Set([...DEFAULT_CATEGORIES, ...items.map(i => i.category)]);
+            
+            filterSelect.innerHTML = `<option value="ALL">All Categories (${items.length})</option>`;
+            existingCategories.forEach(cat => {
+                const count = items.filter(i => i.category === cat).length;
+                if(count > 0 || DEFAULT_CATEGORIES.includes(cat)) {
+                    filterSelect.innerHTML += `<option value="${cat}">${cat} (${count})</option>`;
+                }
+            });
+        }
+
+        // Render Dashboard Metrics & Charts
+        function renderDashboard() {
+            let total = 0;
+            let orderedCost = 0, orderedCount = 0;
+            let deliveredCost = 0, deliveredCount = 0;
+            let wishlistCost = 0, wishlistCount = 0;
+
+            const categoryTotals = {};
+
+            items.forEach(item => {
+                const price = parseFloat(item.price) || 0;
+                total += price;
+
+                // Status counts
+                if (item.status === 'Ordered' || item.status === 'In Transit') {
+                    orderedCost += price;
+                    orderedCount++;
+                } else if (item.status === 'Delivered' || item.status === 'Installed') {
+                    deliveredCost += price;
+                    deliveredCount++;
+                } else {
+                    wishlistCost += price;
+                    wishlistCount++;
+                }
+
+                // Category accumulation
+                categoryTotals[item.category] = (categoryTotals[item.category] || 0) + price;
+            });
+
+            // Update UI Cards
+            document.getElementById('dashTotalBudget').innerText = formatCurrency(total);
+            document.getElementById('dashTotalCount').innerText = items.length;
+            document.getElementById('dashAvgCost').innerText = `Avg: ${formatCurrency(items.length ? total / items.length : 0)}`;
+
+            document.getElementById('dashOrderedCost').innerText = formatCurrency(orderedCost);
+            document.getElementById('dashOrderedCount').innerText = orderedCount;
+
+            document.getElementById('dashDeliveredCost').innerText = formatCurrency(deliveredCost);
+            document.getElementById('dashDeliveredCount').innerText = deliveredCount;
+
+            document.getElementById('dashWishlistCost').innerText = formatCurrency(wishlistCost);
+            document.getElementById('dashWishlistCount').innerText = wishlistCount;
+
+            // Render Category Breakdown List
+            renderCategoryBreakdown(categoryTotals, total);
+
+            // Render Chart.js
+            renderChart(categoryTotals);
+        }
+
+        function renderCategoryBreakdown(categoryTotals, totalBudget) {
+            const container = document.getElementById('categoryBreakdownContainer');
+            container.innerHTML = '';
+
+            const sortedCat = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+
+            if (sortedCat.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">No expense items recorded yet.</p>`;
+                return;
+            }
+
+            sortedCat.forEach(([cat, amount]) => {
+                const percentage = totalBudget > 0 ? ((amount / totalBudget) * 100).toFixed(1) : 0;
+                container.innerHTML += `
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-semibold text-slate-700">${cat}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-slate-900">${formatCurrency(amount)}</span>
+                                <span class="text-slate-400 font-normal w-10 text-right">${percentage}%</span>
+                            </div>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                            <div class="bg-brand-500 h-2 rounded-full transition-all duration-500" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderChart(categoryTotals) {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            
+            const labels = Object.keys(categoryTotals);
+            const data = Object.values(categoryTotals);
+
+            if (categoryChartInstance) {
+                categoryChartInstance.destroy();
+            }
+
+            if (labels.length === 0) {
+                return;
+            }
+
+            categoryChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            '#0ea5e9', '#6366f1', '#10b981', '#f59e0b', '#8b5cf6',
+                            '#ec4899', '#14b8a6', '#f97316', '#64748b'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.label}: ${formatCurrency(context.raw)}`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        // Render Filtered & Sorted Items
+        function renderItems() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const selectedCategory = document.getElementById('filterCategory').value;
+            const selectedStatus = document.getElementById('filterStatus').value;
+            const sortBy = document.getElementById('sortBy').value;
+
+            // Filter logic
+            let filtered = items.filter(item => {
+                const matchesSearch = (item.name || '').toLowerCase().includes(searchQuery) ||
+                                      (item.model || '').toLowerCase().includes(searchQuery) ||
+                                      (item.store || '').toLowerCase().includes(searchQuery) ||
+                                      (item.description || '').toLowerCase().includes(searchQuery);
+
+                const matchesCat = selectedCategory === 'ALL' || item.category === selectedCategory;
+                const matchesStatus = selectedStatus === 'ALL' || item.status === selectedStatus;
+
+                return matchesSearch && matchesCat && matchesStatus;
+            });
+
+            // Sorting logic
+            filtered.sort((a, b) => {
+                if (sortBy === 'price-desc') return b.price - a.price;
+                if (sortBy === 'price-asc') return a.price - b.price;
+                if (sortBy === 'name-asc') return a.name.localeCompare(b.name);
+                if (sortBy === 'date-desc') return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+                if (sortBy === 'date-asc') return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+                if (sortBy === 'delivery-asc') return new Date(a.deliveryDate || '2099-12-31') - new Date(b.deliveryDate || '2099-12-31');
+                return 0;
+            });
+
+            const cardsView = document.getElementById('cardsView');
+            const tableBody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('emptyState');
+
+            if (filtered.length === 0) {
+                cardsView.innerHTML = '';
+                tableBody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            // Render Cards View
+            cardsView.innerHTML = filtered.map(item => {
+                const statusInfo = STATUS_CONFIG[item.status] || STATUS_CONFIG['Wishlist'];
+                const imageSrc = item.image || 'https://placehold.co/300x200/f1f5f9/94a3b8?text=No+Image';
+
+                return `
+                    <div class="bg-white border border-slate-200 rounded-2xl shadow-xs hover:shadow-md transition flex flex-col justify-between overflow-hidden group">
+                        <div>
+                            <!-- Card Image -->
+                            <div class="relative h-44 bg-slate-100 overflow-hidden cursor-pointer" onclick="openDetailModal('${item.id}')">
+                                <img src="${imageSrc}" alt="${escapeHtml(item.name)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='https://placehold.co/300x200/f1f5f9/94a3b8?text=No+Image'">
+                                <span class="absolute top-3 left-3 px-2.5 py-1 text-xs font-bold rounded-lg border shadow-xs ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border} flex items-center gap-1.5">
+                                    <i class="fa-solid ${statusInfo.icon}"></i> ${item.status}
+                                </span>
+                                <span class="absolute bottom-3 right-3 px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-900/75 text-white backdrop-blur-xs">
+                                    ${item.category}
+                                </span>
+                            </div>
+
+                            <!-- Card Info -->
+                            <div class="p-4 space-y-2">
+                                <div class="flex justify-between items-start gap-2">
+                                    <h4 class="font-bold text-slate-800 text-base leading-snug line-clamp-1 hover:text-brand-600 cursor-pointer" onclick="openDetailModal('${item.id}')">${escapeHtml(item.name)}</h4>
+                                    <span class="font-extrabold text-slate-900 text-base whitespace-nowrap">${formatCurrency(item.price)}</span>
+                                </div>
+
+                                <div class="text-xs text-slate-500 space-y-1">
+                                    ${item.store ? `<p><i class="fa-solid fa-store text-slate-400 w-4"></i> ${escapeHtml(item.store)}</p>` : ''}
+                                    ${item.model ? `<p><i class="fa-solid fa-barcode text-slate-400 w-4"></i> ${escapeHtml(item.model)}</p>` : ''}
+                                    ${item.deliveryDate ? `<p><i class="fa-regular fa-calendar-check text-slate-400 w-4"></i> Delivery: ${item.deliveryDate}</p>` : ''}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card Footer Controls -->
+                        <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                            <div>
+                                ${item.link ? `<a href="${item.link}" target="_blank" rel="noopener" class="text-xs text-brand-600 hover:underline flex items-center gap-1 font-semibold"><i class="fa-solid fa-arrow-up-right-from-square"></i> Link</a>` : '<span class="text-xs text-slate-400">No Link</span>'}
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="quickStatusToggle('${item.id}')" class="text-xs text-slate-500 hover:text-brand-600 p-1.5 rounded-lg hover:bg-slate-200 transition" title="Quick Cycle Status">
+                                    <i class="fa-solid fa-arrows-rotate"></i>
+                                </button>
+                                <button onclick="editItem('${item.id}')" class="text-xs text-slate-500 hover:text-amber-600 p-1.5 rounded-lg hover:bg-slate-200 transition" title="Edit">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button onclick="deleteItem('${item.id}')" class="text-xs text-slate-500 hover:text-red-600 p-1.5 rounded-lg hover:bg-slate-200 transition" title="Delete">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Render Table View
+            tableBody.innerHTML = filtered.map(item => {
+                const statusInfo = STATUS_CONFIG[item.status] || STATUS_CONFIG['Wishlist'];
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-3">
+                                <img src="${item.image || 'https://placehold.co/100/f1f5f9/94a3b8?text=N/A'}" class="w-10 h-10 rounded-lg object-cover border border-slate-200 flex-shrink-0" onerror="this.src='https://placehold.co/100/f1f5f9/94a3b8?text=N/A'">
+                                <div>
+                                    <a href="javascript:void(0)" onclick="openDetailModal('${item.id}')" class="font-bold text-slate-800 hover:text-brand-600 text-sm line-clamp-1">${escapeHtml(item.name)}</a>
+                                    ${item.link ? `<a href="${item.link}" target="_blank" class="text-xs text-brand-600 hover:underline"><i class="fa-solid fa-link text-[10px]"></i> Link</a>` : ''}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4 font-medium text-slate-700">${escapeHtml(item.category)}</td>
+                        <td class="py-3 px-4">
+                            <button onclick="quickStatusToggle('${item.id}')" class="px-2.5 py-0.5 text-xs font-bold rounded-lg border ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border} hover:opacity-80 transition inline-flex items-center gap-1">
+                                <i class="fa-solid ${statusInfo.icon}"></i> ${item.status}
+                            </button>
+                        </td>
+                        <td class="py-3 px-4 text-xs text-slate-500">
+                            <div>${escapeHtml(item.store || '-')}</div>
+                            <div class="text-slate-400 font-mono text-[11px]">${escapeHtml(item.model || '')}</div>
+                        </td>
+                        <td class="py-3 px-4 text-right font-bold text-slate-900">${formatCurrency(item.price)}</td>
+                        <td class="py-3 px-4 text-xs text-slate-500">${item.deliveryDate || '-'}</td>
+                        <td class="py-3 px-4 text-center space-x-1">
+                            <button onclick="editItem('${item.id}')" class="p-1.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-slate-100 transition"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteItem('${item.id}')" class="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100 transition"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // View Switcher logic
+        function switchView(view) {
+            currentView = view;
+            const cardsView = document.getElementById('cardsView');
+            const tableView = document.getElementById('tableView');
+            const btnCards = document.getElementById('viewBtnCards');
+            const btnTable = document.getElementById('viewBtnTable');
+
+            if (view === 'cards') {
+                cardsView.classList.remove('hidden');
+                tableView.classList.add('hidden');
+                btnCards.className = "p-1.5 px-2.5 text-xs font-semibold rounded-lg bg-white shadow-xs text-brand-600 transition";
+                btnTable.className = "p-1.5 px-2.5 text-xs font-semibold rounded-lg text-slate-500 transition hover:text-slate-800";
+            } else {
+                cardsView.classList.add('hidden');
+                tableView.classList.remove('hidden');
+                btnTable.className = "p-1.5 px-2.5 text-xs font-semibold rounded-lg bg-white shadow-xs text-brand-600 transition";
+                btnCards.className = "p-1.5 px-2.5 text-xs font-semibold rounded-lg text-slate-500 transition hover:text-slate-800";
+            }
+        }
+
+        // Toggle Custom Category Input Form
+        function toggleCustomCategory() {
+            const select = document.getElementById('itemCategory');
+            const customContainer = document.getElementById('customCategoryContainer');
+            if (select.value === 'Custom') {
+                customContainer.classList.remove('hidden');
+                document.getElementById('itemCustomCategory').setAttribute('required', 'true');
+            } else {
+                customContainer.classList.add('hidden');
+                document.getElementById('itemCustomCategory').removeAttribute('required');
+            }
+        }
+
+        // Preview Image File Upload & Conversion to Data URL
+        function previewImageFile(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentImageData = e.target.result;
+                    document.getElementById('imagePreviewEl').src = currentImageData;
+                    document.getElementById('imagePreviewBox').classList.remove('hidden');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeSelectedImage() {
+            currentImageData = null;
+            document.getElementById('itemImageInput').value = '';
+            document.getElementById('imagePreviewEl').src = '';
+            document.getElementById('imagePreviewBox').classList.add('hidden');
+        }
+
+        // Add / Update Item Handler
+        function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const id = document.getElementById('itemId').value || Date.now().toString();
+            let category = document.getElementById('itemCategory').value;
+            if (category === 'Custom') {
+                category = document.getElementById('itemCustomCategory').value.trim() || 'General';
+            }
+
+            const newItem = {
+                id: id,
+                name: document.getElementById('itemName').value.trim(),
+                category: category,
+                status: document.getElementById('itemStatus').value,
+                price: parseFloat(document.getElementById('itemPrice').value) || 0,
+                store: document.getElementById('itemStore').value.trim(),
+                model: document.getElementById('itemModel').value.trim(),
+                deliveryDate: document.getElementById('itemDeliveryDate').value,
+                link: document.getElementById('itemLink').value.trim(),
+                description: document.getElementById('itemDescription').value.trim(),
+                image: currentImageData || '',
+                createdAt: new Date().toISOString()
+            };
+
+            const existingIndex = items.findIndex(i => i.id === id);
+            if (existingIndex > -1) {
+                // Keep image if not updated
+                if(!currentImageData && items[existingIndex].image) {
+                    newItem.image = items[existingIndex].image;
+                }
+                items[existingIndex] = newItem;
+            } else {
+                items.unshift(newItem);
+            }
+
+            saveToLocalStorage();
+            populateCategoryFilter();
+            renderDashboard();
+            renderItems();
+            closeModal('itemModal');
+            resetForm();
+        }
+
+        function resetForm() {
+            document.getElementById('itemForm').reset();
+            document.getElementById('itemId').value = '';
+            removeSelectedImage();
+            toggleCustomCategory();
+        }
+
+        function editItem(id) {
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+
+            document.getElementById('modalTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-brand-600"></i> Edit Item`;
+            document.getElementById('itemId').value = item.id;
+            document.getElementById('itemName').value = item.name;
+            
+            if (DEFAULT_CATEGORIES.includes(item.category)) {
+                document.getElementById('itemCategory').value = item.category;
+            } else {
+                document.getElementById('itemCategory').value = 'Custom';
+                toggleCustomCategory();
+                document.getElementById('itemCustomCategory').value = item.category;
+            }
+
+            document.getElementById('itemStatus').value = item.status;
+            document.getElementById('itemPrice').value = item.price;
+            document.getElementById('itemStore').value = item.store || '';
+            document.getElementById('itemModel').value = item.model || '';
+            document.getElementById('itemDeliveryDate').value = item.deliveryDate || '';
+            document.getElementById('itemLink').value = item.link || '';
+            document.getElementById('itemDescription').value = item.description || '';
+
+            if (item.image) {
+                currentImageData = item.image;
+                document.getElementById('imagePreviewEl').src = item.image;
+                document.getElementById('imagePreviewBox').classList.remove('hidden');
+            } else {
+                removeSelectedImage();
+            }
+
+            openModal('itemModal');
+        }
+
+        function deleteItem(id) {
+            if (confirm('Are you sure you want to delete this item?')) {
+                items = items.filter(i => i.id !== id);
+                saveToLocalStorage();
+                populateCategoryFilter();
+                renderDashboard();
+                renderItems();
+            }
+        }
+
+        // Quick cycle status on click
+        function quickStatusToggle(id) {
+            const statusOrder = ['Wishlist', 'Ordered', 'In Transit', 'Delivered', 'Installed'];
+            const item = items.find(i => i.id === id);
+            if (item) {
+                const currentIndex = statusOrder.indexOf(item.status);
+                const nextIndex = (currentIndex + 1) % statusOrder.length;
+                item.status = statusOrder[nextIndex];
+                saveToLocalStorage();
+                renderDashboard();
+                renderItems();
+            }
+        }
+
+        // Open Detail Modal
+        function openDetailModal(id) {
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+
+            const statusInfo = STATUS_CONFIG[item.status] || STATUS_CONFIG['Wishlist'];
+            const imageSrc = item.image || 'https://placehold.co/600x400/f1f5f9/94a3b8?text=No+Image+Attached';
+
+            document.getElementById('detailContent').innerHTML = `
+                <div class="relative h-60 bg-slate-100 rounded-xl overflow-hidden mb-4">
+                    <img src="${imageSrc}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x400/f1f5f9/94a3b8?text=No+Image+Attached'">
+                    <span class="absolute top-3 left-3 px-3 py-1 text-xs font-bold rounded-lg border shadow-xs ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border}">
+                        <i class="fa-solid ${statusInfo.icon}"></i> ${item.status}
+                    </span>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-xs font-bold text-brand-600 uppercase tracking-wider">${escapeHtml(item.category)}</span>
+                            <h2 class="text-xl font-bold text-slate-900">${escapeHtml(item.name)}</h2>
+                        </div>
+                        <span class="text-2xl font-extrabold text-slate-900">${formatCurrency(item.price)}</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 mt-4 p-3 bg-slate-50 rounded-xl text-xs">
+                        <div>
+                            <span class="text-slate-400 block">Store / Bought From:</span>
+                            <span class="font-semibold text-slate-700">${escapeHtml(item.store || 'N/A')}</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block">Model / Serial No:</span>
+                            <span class="font-semibold text-slate-700 font-mono">${escapeHtml(item.model || 'N/A')}</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block">Target Delivery Date:</span>
+                            <span class="font-semibold text-slate-700">${item.deliveryDate || 'N/A'}</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block">Product Link:</span>
+                            ${item.link ? `<a href="${item.link}" target="_blank" class="text-brand-600 font-semibold hover:underline">Visit Store Page <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i></a>` : '<span class="text-slate-500">None</span>'}
+                        </div>
+                    </div>
+
+                    ${item.description ? `
+                        <div class="mt-4">
+                            <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Notes / Description</h4>
+                            <p class="text-sm text-slate-700 bg-slate-50 p-3 rounded-xl whitespace-pre-line border border-slate-100">${escapeHtml(item.description)}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            openModal('detailModal');
+        }
+
+        // Export and Import Logic
+        function exportJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(items, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `house_renovation_budget_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function exportCSV() {
+            if (items.length === 0) {
+                alert('No data to export!');
+                return;
+            }
+
+            const headers = ['ID', 'Name', 'Category', 'Status', 'Price', 'Store', 'Model', 'DeliveryDate', 'Link', 'Description'];
+            const rows = items.map(i => [
+                i.id,
+                `"${(i.name || '').replace(/"/g, '""')}"`,
+                `"${(i.category || '').replace(/"/g, '""')}"`,
+                `"${i.status}"`,
+                i.price,
+                `"${(i.store || '').replace(/"/g, '""')}"`,
+                `"${(i.model || '').replace(/"/g, '""')}"`,
+                i.deliveryDate || '',
+                `"${i.link || ''}"`,
+                `"${(i.description || '').replace(/"/g, '""')}"`
+            ]);
+
+            const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `house_renovation_budget_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+
+        function importJSON() {
+            const fileInput = document.getElementById('importFileInput');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a JSON file to import.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported)) {
+                        items = imported;
+                        saveToLocalStorage();
+                        populateCategoryFilter();
+                        renderDashboard();
+                        renderItems();
+                        closeModal('exportImportModal');
+                        alert('Items imported successfully!');
+                    } else {
+                        alert('Invalid JSON format. Expected an array of items.');
+                    }
+                } catch (err) {
+                    alert('Error parsing JSON file.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to delete ALL renovation items? This cannot be undone.')) {
+                items = [];
+                saveToLocalStorage();
+                populateCategoryFilter();
+                renderDashboard();
+                renderItems();
+                closeModal('exportImportModal');
+            }
+        }
+
+        // Modal Helpers
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+            if (modalId === 'itemModal') resetForm();
+        }
+
+        // Format Currency Helper
+        function formatCurrency(val) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
+        }
+
+        // Escape HTML for XSS prevention
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
+        }
+    </script>
+</body>
+</html>
